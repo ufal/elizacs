@@ -1,0 +1,122 @@
+<HTML>
+<HEAD>
+	<TITLE>Eliza česky (elizabot.js + Lindat Translation)</TITLE>
+	<SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript" SRC="elizabot.js"></SCRIPT>
+	<SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript" SRC="elizadata.js"></SCRIPT>
+
+<SCRIPT LANGUAGE="JavaScript" TYPE="text/javascript">
+
+var eliza = new ElizaBot();
+var elizaLines = new Array();
+
+var displayCols = 60;
+var displayRows = 20;
+
+function translate(text, sourceLang, targetLang) {
+  const url = `https://lindat.mff.cuni.cz/services/translation/api/v2/models/${sourceLang}-${targetLang}`;
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", url, false); // false = synchronní
+  xhr.setRequestHeader("accept", "text/plain");
+  xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+  xhr.send("input_text=" + encodeURIComponent(text));
+
+  if (xhr.status === 200) return xhr.responseText.trim();
+  else throw new Error("Překlad selhal: " + xhr.status);
+}
+
+function en2cs(text) {
+    return translate(text, 'en', 'cs')
+}
+
+function cs2en(text) {
+    return translate(text, 'cs', 'en')
+}
+
+function elizaReset() {
+	eliza.reset();
+	elizaLines.length = 0;
+	elizaStep();
+}
+
+function elizaStep() {
+	var f = document.forms.e_form;
+	var userinput = f.e_input.value;
+	if (eliza.quit) {
+		f.e_input.value = '';
+		if (confirm("Toto sezení skončilo.\nZačít znovu?")) elizaReset();
+		f.e_input.focus();
+		return;
+	}
+	else if (userinput != '') {
+		var usr = 'TY:   ' + userinput;
+		var rpl ='ELIZA: ' + en2cs(eliza.transform(cs2en(userinput)));
+		elizaLines.push(usr);
+		elizaLines.push(rpl);
+		// display nicely
+		// (fit to textarea with last line free - reserved for extra line caused by word wrap)
+		var temp  = new Array();
+		var l = 0;
+		for (var i=elizaLines.length-1; i>=0; i--) {
+			l += 1 + Math.floor(elizaLines[i].length/displayCols);
+			if (l >= displayRows) break
+			else temp.push(elizaLines[i]);
+		}
+		elizaLines = temp.reverse();
+		f.e_display.value = elizaLines.join('\n');
+	}
+	else if (elizaLines.length == 0) {
+		// no input and no saved lines -> output initial
+		var initial = 'ELIZA: ' + en2cs(eliza.getInitial());
+		elizaLines.push(initial);
+		f.e_display.value = initial + '\n';
+	}
+	f.e_input.value = '';
+	f.e_input.focus();
+}
+
+</SCRIPT>
+</HEAD>
+
+<BODY TOPMARGIN="0" LEFTMARGIN="0" RIGHTMARGIN="0" BOTTOMMARGIN="0" MARGINHEIGHT="0" MARGINWIDTH="0" STYLE="border:0" onload="window.setTimeout('elizaReset()',100)"><A NAME="top"></A>
+
+<CENTER>
+<P>&nbsp;</P>
+<H3>Eliza</H3>
+<TABLE BORDER="0" CELLSPACING="10" CELLPADDING="0">
+<FORM NAME="e_form" onsubmit="elizaStep();return false">
+<TR><TD COLSPAN="2"><TEXTAREA NAME="e_display" COLS="60" ROWS="20"></TEXTAREA></TD></TR>
+<TR VALIGN="middle">
+	<TD><INPUT TYPE="text" NAME="e_input" SIZE="50"></TD>
+	<TD ALIGN="right"><INPUT TYPE="submit" VALUE="&nbsp;Říci&nbsp;"> <INPUT TYPE="reset" VALUE="Resetovat" onClick="window.setTimeout('elizaReset()',100)"></TD>
+</TR>
+</FORM>
+</TABLE>
+</CENTER>
+
+<p>Reference:</p>
+<ul>
+    <li>Původní Eliza:
+    Weizenbaum, Joseph &quot;ELIZA &#150; A Computer Program For the Study of Natural Language
+    Communication Between Man and Machine&quot;<BR>
+    in: Communications of the ACM; Volume 9 , Issue 1 (January 1966): p 36-45.
+    </li>
+    <li>
+    Javascriptová implementace:
+    N. Landsteiner 2005; &lt;<A HREF="http://www.masswerk.at/" TARGET="_blank">http://www.masswerk.at</A>&gt;
+    </li>
+    <li>
+    Česká verze:
+    <a href="https://ufal.mff.cuni.cz/rudolf-rosa">Rudolf Rosa</a> 2025
+    </li>
+    <li>
+    Automatický překlad mezi češtinou a angličtinou:
+    Popel, M., Tomkova, M., Tomek, J. et al. Transforming machine translation: a
+    deep learning system reaches news translation quality comparable to human
+    professionals. Nat Commun 11, 4381 (2020).
+    <a href="https://doi.org/10.1038/s41467-020-18073-9">https://doi.org/10.1038/s41467-020-18073-9</a>
+    (skrze službu <a href="https://lindat.mff.cuni.cz/services/translation/">Lindat Translation</a>)
+    </li>
+</ul>
+
+</BODY>
+</HTML>
